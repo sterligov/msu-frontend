@@ -1,0 +1,30 @@
+image: docker:19.03.0
+
+variables:
+  DOCKER_DRIVER: overlay2
+  DOCKER_TLS_CERTDIR: "/certs"
+
+services:
+  - docker:19.03.0-dind
+
+cache:
+  paths:
+    - node_modules
+
+stages:
+  - deploy
+
+deploy:
+  stage: deploy
+  before_script:
+    - apk add openssh-client
+    - mkdir -p ~/.ssh
+    - echo "${GITLAB_SSH_KEY}" | tr -d '\r' > ~/.ssh/id_rsa
+    - chmod 700 ~/.ssh/id_rsa
+    - eval "$(ssh-agent -s)"
+    - ssh-add ~/.ssh/id_rsa
+    - ssh-keyscan -H "${GITLAB_HOST}" >> ~/.ssh/known_hosts
+    - chmod +x deploy.sh
+  script: ./deploy.sh
+  only:
+    - master
